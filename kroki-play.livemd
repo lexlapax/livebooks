@@ -1,0 +1,60 @@
+# playground
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.8.0"},
+  # {:image, "~> 0.15.0"},
+  # {:stb_image, "~> 0.6.0"}
+  {:stb_image, github: "elixir-nx/stb_image"},
+  {:nx, "~> 0.4.1"}
+  # {:graphvix, "~> 1.0"}
+])
+```
+
+## Section
+
+```elixir
+__DIR__
+File.ls!(Path.join(__DIR__, "images"))
+```
+
+```elixir
+# img = Image.open!(Path.join(__DIR__, "images/test.png"))
+img = StbImage.read_file!(Path.join(__DIR__, "images/test.png"))
+
+tn = StbImage.to_nx(img)
+# image = Vix.Vips.Operation.black!(3,3)
+# Image.
+```
+
+```elixir
+xkcd_colors = %{
+  "cloudy blue" => "#acc2d9",
+  "dark pastel green" => "#56ae57",
+  "dust" => "#b2996e",
+  "electric lime" => "#a8ff04",
+  "fresh green" => "#69d84f"
+}
+
+# "heloo:" + "blart"
+xkcd_colors = Enum.into(xkcd_colors, %{}, fn {k, v} -> {"xkcd:" <> k, v} end)
+```
+
+```elixir
+alias ExPaint.{Font, Color}
+
+{:ok, image} = ExPaint.create(128, 64)
+font = Font.load("Helvetica11")
+
+ExPaint.clear(image)
+
+ExPaint.text(image, {10, 15}, font, "Hello World", Color.black())
+ExPaint.filled_rect(image, {10, 10}, {20, 20}, %Color{r: 230, g: 12, b: 34})
+ExPaint.filled_ellipse(image, {50, 10}, {20, 20}, %Color{r: 12, g: 12, b: 230})
+ExPaint.filled_triangle(image, {90, 30}, {100, 10}, {110, 30}, %Color{r: 230, g: 230, b: 34})
+# If you're in iTerm, display inline
+# inline_data = ExPaint.render(image, ExPaint.InlineRasterizer)
+{:ok, png_data} = ExPaint.render(image, ExPaint.PNGRasterizer)
+# png_data
+Kino.Image.new(png_data, :png)
+```

@@ -1,0 +1,182 @@
+# Image/Vix interop with eVision/OpenCV
+
+```elixir
+Mix.install([
+  {:image, "~> 0.14.2"},
+  {:evision, "~> 0.1.21"},
+  {:nx, "~> 0.4.0"},
+  {:kino, "~> 0.7.0"}
+])
+```
+
+## Define a known tensor as the reference image
+
+```elixir
+tensor =
+  Nx.tensor(
+    [
+      [
+        [10, 20, 30],
+        [40, 50, 60]
+      ],
+      [
+        [70, 80, 90],
+        [100, 110, 120]
+      ],
+      [
+        [130, 140, 150],
+        [160, 170, 180]
+      ]
+    ],
+    type: {:u, 8}
+  )
+```
+
+```elixir
+tensor = Nx.reshape(tensor, Nx.shape(tensor), names: [:width, :height, :bands])
+```
+
+## Save the tensor as a reference image
+
+```elixir
+{:ok, image} = Image.from_nx(tensor)
+# Image.write(image, "/tmp/ref.png")
+Kino.Image.new("/tmp/ref.png", :png)
+```
+
+## Import the tensor into eVision
+
+```elixir
+# {:ok, evision} = Evision.Nx.to_mat(tensor)
+evision = Evision.Mat.from_nx(tensor)
+```
+
+## Render the eVision image as a tensor
+
+The tensor as imported from Image to eVision, then exported again to Nx shows the tensor has the same data and shape.
+
+```elixir
+Evision.Mat.to_nx(evision)
+```
+
+Image stores data as `{width, height, bands}`. eVision stores data as `{height, width, bands}`. So transpose the axes in eVision.
+
+<!-- livebook:{"break_markdown":true} -->
+
+Let's save that as an image even though the data is in the wrong order. It should still be a valid image.
+
+```elixir
+Evision.imwrite("/tmp/evision.png", evision)
+```
+
+We get an error writing the image.
+
+<!-- livebook:{"force_markdown":true} -->
+
+```elixir
+libpng warning: Invalid image width in IHDR
+libpng warning: Image width exceeds user limit in IHDR
+libpng warning: Invalid image height in IHDR
+libpng warning: Image height exceeds user limit in IHDR
+libpng error: Invalid IHDR data
+```
+
+## Transpose the image data
+
+```elixir
+transposed = Evision.Mat.transpose(evision, [1, 0, 2])
+```
+
+Now see what the matrix looks like after exporting the transposition to Nx. From an Nx perspective the data looks correctly transposed.
+
+```elixir
+Evision.Mat.to_nx(transposed)
+```
+
+Save the transposed image and see what it looks like
+
+```elixir
+Evision.imwrite("/tmp/transposed.png", transposed)
+```
+
+We get the same error:
+
+<!-- livebook:{"force_markdown":true} -->
+
+```elixir
+libpng warning: Invalid image width in IHDR
+libpng warning: Image width exceeds user limit in IHDR
+libpng warning: Invalid image height in IHDR
+libpng warning: Image height exceeds user limit in IHDR
+libpng error: Invalid IHDR data
+```
+
+<!-- livebook:{"break_markdown":true} -->
+
+Lets look at the shape of the data in the transposed image to confirm is {2, 3, 3}
+
+```elixir
+Evision.Mat.shape(transposed)
+```
+
+## Convert from RGB to BGR
+
+Since Image data is RGB but eVision is BGR we need to convert it.
+
+```elixir
+bgr = Evision.cvtColor(transposed, Evision.cv_COLOR_RGB2BGR())
+Evision.Mat.to_nx(bgr)
+```
+
+Well that's unexpected.  I would expect `[10, 20, 30]` to become `[30, 20, 10]`??  It also seems the the transposition is largely undone?  The data is in the same order as that of the original tensor, just grouped in `{2, 3}` rather than `{3, 2}`.
+
+<!-- livebook:{"break_markdown":true} -->
+
+And try writing it again
+
+```elixir
+Evision.imwrite("/tmp/bgr.png", bgr)
+```
+
+Nope, that data is completely unrecognizable!!!!!
+
+## Try a sample image
+
+```elixir
+{:ok, i} = Image.open("/Users/spuri/Downloads/test_images/qrcode.png", access: :random)
+```
+
+```elixir
+{:ok, t2} = Image.to_nx(i)
+e2 = Evision.Mat.from_nx(t2)
+trans2 = Evision.Mat.transpose(e2, [1, 0, 2])
+bgr2 = Evision.cvtColor(trans2, Evision.cv_COLOR_RGB2BGR())
+Evision.imwrite("/tmp/qrcode_evision.png", bgr2)
+```
+
+## Try Image.from_nx on our original data
+
+```elixir
+{:ok, i2} = Image.from_nx(t2)
+Image.write(i2, "/tmp/qrcode_orig.png")
+```
+
+## Serialize the tensor for debugging purposes
+
+```elixir
+{:ok, tensor} = Image.open!("/Users/spuri/Downloads/test_images/color.jpg") |> Image.to_nx()
+binary = tensor |> :erlang.term_to_binary()
+File.write("/tmp/color_checker.etf", binary)
+```
+
+## Now recover the etf to confirm its ok
+
+```elixir
+t3 = File.read!("/tmp/color_checker.etf") |> :erlang.binary_to_term()
+{:ok, i3} = Image.from_nx(t3)
+Image.write(i3, "/tmp/color_checker_roundtrip.jpg")
+```
+
+```elixir
+System.tmp_dir!()
+```

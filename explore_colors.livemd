@@ -1,0 +1,31 @@
+# exploring colors
+
+```elixir
+Mix.install([
+  {:nx, "~> 0.4.1"},
+  {:exla, "~> 0.4.1"},
+  {:vix, "~> 0.15.1"},
+  {:evision, "~> 0.1.21"},
+  {:image, "~> 0.15.0"},
+  {:kino, "~> 0.8.0"}
+])
+```
+
+## colorspaces
+
+https://learnopencv.com/color-spaces-in-opencv-cpp-python/
+
+```elixir
+alias Evision, as: Cv2
+dark = Cv2.imread(Path.join(__DIR__, "images/rub01.jpg"))
+# Kino.Image.new(Cv2.imencode(".png", bright), :png)
+```
+
+```elixir
+bright = Cv2.imread(Path.join(__DIR__, "images/rub08.jpg"))
+# Kino.Image.new(Cv2.imencode(".png", dark), :png)
+```
+
+```elixir
+brightLAB = Cv2.cvtColor(bright, Cv2.cv_COLOR_BGR2Lab())
+```

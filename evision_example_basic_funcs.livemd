@@ -1,0 +1,136 @@
+<!-- vim: syntax=markdown -->
+
+# Evision Example - Get Started with Some Basic Functions
+
+```elixir
+# set `EVISION_PREFER_PRECOMPILED` to `false` 
+# if you prefer `:evision` to be compiled from source
+# note that to compile from source, you may need at least 1GB RAM
+# System.put_env("EVISION_PREFER_PRECOMPILED", "false")
+
+Mix.install([
+  {:evision, "~> 0.1.21"},
+  {:req, "~> 0.3.2"},
+  {:kino, "~> 0.7"}
+])
+```
+
+## Define Some Helper Functions
+
+```elixir
+__DIR__
+```
+
+```elixir
+defmodule Helper do
+  def download!(url, save_as, overwrite \\ false)
+
+  def download!(url, save_as, false) do
+    unless File.exists?(save_as) do
+      download!(url, save_as, true)
+    end
+
+    :ok
+  end
+
+  def download!(url, save_as, true) do
+    body =
+      case Req.get!(url) do
+        %Req.Response{status: 200, body: body} ->
+          body
+
+        error ->
+          raise inspect(error)
+      end
+
+    File.write!(save_as, body)
+  end
+end
+```
+
+## Read an Image From File
+
+```elixir
+alias Evision, as: Cv
+
+# Download the test image
+lenna_test_image_path = Path.join(__DIR__, "lenna_test_image.png")
+
+Helper.download!(
+  "https://upload.wikimedia.org/wikipedia/en/7/7d/Lenna_%28test_image%29.png",
+  lenna_test_image_path
+)
+
+# Read the test image
+mat = Cv.imread(lenna_test_image_path)
+```
+
+## Encode an Image
+
+```elixir
+encoded = Cv.imencode(".png", mat)
+Kino.Image.new(encoded, :png)
+```
+
+## Resize an Image
+
+```elixir
+resized_mat = Cv.resize(mat, {_width = 256, _height = 128})
+```
+
+```elixir
+encoded = Cv.imencode(".png", resized_mat)
+Kino.Image.new(encoded, :png)
+```
+
+## Get a Subarea in an Image
+
+`Evision.Mat.roi`
+
+```elixir
+Cv.imencode(".png", Cv.Mat.roi(mat, {10, 10, 130, 200}))
+|> Kino.Image.new(:png)
+```
+
+## Encode and Decode Image in Memory
+
+```elixir
+# encode in memory
+encoded_in_memory = Cv.imencode(".png", resized_mat)
+```
+
+```elixir
+# decode in memory
+decoded_mat = Cv.imdecode(encoded_in_memory, Cv.cv_IMREAD_ANYCOLOR())
+```
+
+## Read an PNG File With/Without Alpha Channel
+
+```elixir
+# download the test image (has alpha channel)
+download_path = Path.join(__DIR__, "test.png")
+
+Helper.download!(
+  "https://raw.githubusercontent.com/cocoa-xu/evision/main/test/testdata/test.png",
+  download_path
+)
+```
+
+```elixir
+without_alpha = Cv.imread(download_path)
+```
+
+```elixir
+Cv.imread(download_path, flags: Cv.cv_IMREAD_UNCHANGED())
+```
+
+## Read an Image and Convert It to Grayscale in a Single Call
+
+```elixir
+gray_scale_mat = Cv.imread(lenna_test_image_path, flags: Cv.cv_IMREAD_GRAYSCALE())
+```
+
+```elixir
+gray_scale = Cv.imencode(".png", gray_scale_mat)
+Kino.Image.new(gray_scale, :png)
+```
